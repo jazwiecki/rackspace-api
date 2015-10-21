@@ -190,15 +190,14 @@ class Connection(object):
     def _generateSignature(self, timestamp):
         if not self.user_key or not self.secret_key:
             return ""
-        signature_hash_source = '%s%s%s%s' % (self.user_key, self.user_agent, timestamp, self.secret_key)
-        sha1_hash = hashlib.sha1(signature_hash_source).digest()
+        sha1_hash = hashlib.sha1(self.user_key + self.user_agent + timestamp + self.secret_key).digest()
         signature = base64.b64encode(sha1_hash)
         return signature
 
     def _call(self, host, method, params, timeout=5000):
 
         timestamp = time.strftime('%Y%m%d%H%M%S') #YYYYMMDDHHmmss
-        signature = '%s:%s:%s' % (self.user_key, timestamp, self._generateSignature(timestamp))
+        signature = ':'.join((self.user_key, timestamp, self._generateSignature(timestamp)))
 
         request = "https://%(host)s/v1/%(method)s?%(params)s" % {
             'host': host,
