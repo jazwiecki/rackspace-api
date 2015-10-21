@@ -72,7 +72,10 @@ class Connection(object):
         c.method('param')
 
     Params:
-        All list/search functions take the following keyword arguments:
+        ***
+        All distribution list/mailbox functions take the following
+        keyword arguments:
+        ***
 
         Search (string): A value to filter the list by Common Name and
         Display Name.
@@ -92,6 +95,16 @@ class Connection(object):
         ExportTo (string): For listings that support exporting,
         this value can be a valid email address. An email will
         be sent containing a link to a CSV file of the requested data.
+
+        ***
+        All Exchange contacts (i.e. not mailboxes) take the following
+        arguments
+        ***
+
+        size (integer): The maximum number of items to return (max 250)
+
+        offset (integer): the offset for the result set
+
     """
 
     def __init__(self, user_key=None, secret_key=None, domain=None):
@@ -105,11 +118,6 @@ class Connection(object):
 
     def list_lists(self, **kwargs):
         """ returns a list of all the Exchange distribution lists in the domain
-        	@parameter limit: number of results to return, max 100
-        	@parameter marker: used in pagination. the common name of the last
-        						object in the previous result set.
-        	@parameter previouspage: used in pagination. Boolean flag that returns
-        						the previous page when used with the "marker" param.
 
         """
         method = "domains/%s/ex/distributionlists" % self.domain
@@ -164,6 +172,18 @@ class Connection(object):
         params = kwargs
         params["exportTo"] = email_address
         data = self._call(self.host, method, params)
+        return data
+
+    def contact_list(self, **kwargs):
+
+        method = "customers/me/domains/%s/ex/contacts" % self.domain
+        data = self._call(self.host, method, kwargs)
+        return data
+
+    def contact_show(self, contact_name, **kwargs):
+
+        method = "customers/me/domains/%s/ex/contacts/%s" % (self.domain, contact_name)
+        data = self._call(self.host, method, kwargs)
         return data
 
     # @classmethod
