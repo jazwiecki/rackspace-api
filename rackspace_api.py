@@ -68,8 +68,30 @@ class Connection(object):
 
     Usage:
         import rackspace_api
-        c = rackspace_api.Connection('user_key','secret_key')
+        c = rackspace_api.Connection('user_key','secret_key', 'domain.tld')
         c.method('param')
+
+    Params:
+        All list/search functions take the following keyword arguments:
+
+        Search (string): A value to filter the list by Common Name and
+        Display Name.
+
+        Marker (string): The common name of the last item from the
+        previous listing call. Use this to get the next page of data.
+
+        Limit (integer): The maximum number of items to return
+
+        Sort (string): "CN" or "Displayname"
+
+        Order (string): "asc" or "desc"
+
+        PreviousPage (bool): eturns the previous page based on Marker.
+        If Marker is not specified, then the last page is returned.
+
+        ExportTo (string): For listings that support exporting,
+        this value can be a valid email address. An email will
+        be sent containing a link to a CSV file of the requested data.
     """
 
     def __init__(self, user_key=None, secret_key=None, domain=None):
@@ -81,24 +103,66 @@ class Connection(object):
         parts = (major, minor, micro, '?')
         self.user_agent = "Python/%d.%d.%d rackspace_api/%s" % parts
 
-    def list_lists(self, limit=None, marker=None, previouspage=None):
+    def list_lists(self, **kwargs):
         """ returns a list of all the Exchange distribution lists in the domain
         	@parameter limit: number of results to return, max 100
-        	@parameter marker: used in pagination. the common name of the last 
+        	@parameter marker: used in pagination. the common name of the last
         						object in the previous result set.
         	@parameter previouspage: used in pagination. Boolean flag that returns
         						the previous page when used with the "marker" param.
-        						
+
         """
-        params = dict()
-        if limit is not None:
-            assert isinstance(limit, integer_types)
-            params["limit"] = str(limit)
-        if marker is not None:
-            params["marker"] = str(marker)
-        if previouspage is not None:
-        	params["previouspage"] = str(previouspage)
         method = "domains/%s/ex/distributionlists" % self.domain
+        data = self._call(self.host, method, kwargs)
+        return data
+
+    def list_members(self, common_name, **kwargs):
+        """ returns a list of members for a distribution list with a
+        given common_name
+
+            @parameter common_name: the common name of the list in question
+        """
+
+        method = "customers/me/domains/%s/ex/distributionlists/%s/members" % (self.domain, common_name)
+        data = self._call(self.host, method, kwargs)
+        return data
+
+    def list_senders(self, common_name, **kwargs):
+        """ returns a list of approved senders for a distribution list
+        with a given common_name
+
+            @parameter common_name: the common name of the list in question
+        """
+
+        method = "customers/me/domains/%s/ex/distributionlists/%s/senders" % (self.domain, common_name)
+        data = self._call(self.host, method, kwargs)
+        return data
+
+    def list_addresses(self, common_name, **kwargs):
+
+        method = "customers/me/domains/%s/ex/distributionlists/%s/emailaddresses" % (self.domain, common_name)
+        data = self._call(self.host, method, kwargs)
+        return data
+
+    def list_read(self, common_name, **kwargs):
+
+        method = "customers/me/domains/%s/ex/distributionlists/%s" % (self.domain, common_name)
+        data = self._call(self.host, method, kwargs)
+        return data
+
+    def list_export_all(self, email_address, **kwargs):
+        """ send csv of all Exchange distribution lists to an email
+        address
+
+        @parameter email_address: string representing an email address
+        to which the download link for the export should be sent
+
+        """
+
+        method = "customers/me/domains/%s/ex/distributionlists/" % self.domain
+
+        params = kwargs
+        params["exportTo"] = email_address
         data = self._call(self.host, method, params)
         return data
 
@@ -127,15 +191,18 @@ class Connection(object):
             opener.addheaders = [('X-Api-Signature', signature),
             					('User-Agent', self.user_agent),
             					('Accept-Encoding', 'gzip, deflate'),
-            					('Accept', 'application/json')]            
+            					('Accept', 'application/json')]
             response = opener.open(request)
             code = response.code
             result = response.read().decode('utf-8')
-            if code != 200:
+            if code not in (200, 202):
                 raise RackspaceError(500, result)
-            if not result.startswith('{'):
+            if not result.startswith('{') and code != 202:
                 raise RackspaceError(500, result)
-            data = json.loads(result)
+            if code != 202:
+                data = json.loads(result)
+            else:
+                data = "{'response': '202 Accepted'}"
             return data
         except URLError as e:
             raise RackspaceError(500, "%s with resulted in %s" % (request,str(e)))
