@@ -1,4 +1,5 @@
 import base64
+import functools
 import hashlib
 import json
 import sys
@@ -225,7 +226,7 @@ class Connection(object):
                 data = "{'response': '202 Accepted'}"
             return data
         except URLError as e:
-            raise RackspaceError(500, "%s with resulted in %s" % (request,str(e)))
+            raise RackspaceError(500, "%s resulted in %s" % (request,str(e)))
         except HTTPError as e:
             raise RackspaceError(e.code, e.read())
         except RackspaceError:
