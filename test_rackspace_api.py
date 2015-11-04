@@ -3,7 +3,7 @@
 This is a py.test script
 
 Example usage on Unix:
-bitly-api-python $ RACKSPACE_USER_KEY=<userkey> RACKSPACE_SECRET=<secret> RACKSPACE_DOMAIN=<domain> nosetests
+ $ RACKSPACE_USER_KEY=<userkey> RACKSPACE_SECRET=<secret> RACKSPACE_DOMAIN=<domain> nosetests
 or 'export' the two environment variables prior to running nosetests
 """
 import os
