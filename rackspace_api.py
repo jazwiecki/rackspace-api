@@ -116,12 +116,20 @@ class Connection(object):
         parts = (major, minor, micro, '?')
         self.user_agent = "Python/%d.%d.%d rackspace_api/%s" % parts
 
+    def list_domains(self, **kwargs):
+        """ returns info about our domain
+        """
+
+        path = "customers/me/domains"
+        data = self._call(self.host, path, kwargs)
+        return data
+
     def list_lists(self, **kwargs):
         """ returns a list of all the Exchange distribution lists in the domain
 
         """
-        method = "domains/%s/ex/distributionlists" % self.domain
-        data = self._call(self.host, method, kwargs)
+        path = "domains/%s/ex/distributionlists" % self.domain
+        data = self._call(self.host, path, kwargs)
         return data
 
     def list_members(self, common_name, **kwargs):
@@ -131,8 +139,8 @@ class Connection(object):
             @parameter common_name: the common name of the list in question
         """
 
-        method = "customers/me/domains/%s/ex/distributionlists/%s/members" % (self.domain, common_name)
-        data = self._call(self.host, method, kwargs)
+        path = "customers/me/domains/%s/ex/distributionlists/%s/members" % (self.domain, common_name)
+        data = self._call(self.host, path, kwargs)
         return data
 
     def list_senders(self, common_name, **kwargs):
@@ -142,20 +150,20 @@ class Connection(object):
             @parameter common_name: the common name of the list in question
         """
 
-        method = "customers/me/domains/%s/ex/distributionlists/%s/senders" % (self.domain, common_name)
-        data = self._call(self.host, method, kwargs)
+        path = "customers/me/domains/%s/ex/distributionlists/%s/senders" % (self.domain, common_name)
+        data = self._call(self.host, path, kwargs)
         return data
 
     def list_addresses(self, common_name, **kwargs):
 
-        method = "customers/me/domains/%s/ex/distributionlists/%s/emailaddresses" % (self.domain, common_name)
-        data = self._call(self.host, method, kwargs)
+        path = "customers/me/domains/%s/ex/distributionlists/%s/emailaddresses" % (self.domain, common_name)
+        data = self._call(self.host, path, kwargs)
         return data
 
     def list_read(self, common_name, **kwargs):
 
-        method = "customers/me/domains/%s/ex/distributionlists/%s" % (self.domain, common_name)
-        data = self._call(self.host, method, kwargs)
+        path = "customers/me/domains/%s/ex/distributionlists/%s" % (self.domain, common_name)
+        data = self._call(self.host, path, kwargs)
         return data
 
     def list_export_all(self, email_address, **kwargs):
@@ -167,23 +175,23 @@ class Connection(object):
 
         """
 
-        method = "customers/me/domains/%s/ex/distributionlists/" % self.domain
+        path = "customers/me/domains/%s/ex/distributionlists/" % self.domain
 
         params = kwargs
         params["exportTo"] = email_address
-        data = self._call(self.host, method, params)
+        data = self._call(self.host, path, params)
         return data
 
     def contact_list(self, **kwargs):
 
-        method = "customers/me/domains/%s/ex/contacts" % self.domain
-        data = self._call(self.host, method, kwargs)
+        path = "customers/me/domains/%s/ex/contacts" % self.domain
+        data = self._call(self.host, path, kwargs)
         return data
 
     def contact_show(self, contact_name, **kwargs):
 
-        method = "customers/me/domains/%s/ex/contacts/%s" % (self.domain, contact_name)
-        data = self._call(self.host, method, kwargs)
+        path = "customers/me/domains/%s/ex/contacts/%s" % (self.domain, contact_name)
+        data = self._call(self.host, path, kwargs)
         return data
 
     # @classmethod
@@ -195,14 +203,14 @@ class Connection(object):
         signature = base64.b64encode(sha1_hash)
         return signature
 
-    def _call(self, host, method, params, timeout=5000):
+    def _call(self, host, path, params, timeout=5000):
 
         timestamp = time.strftime('%Y%m%d%H%M%S').encode('utf-8') #YYYYMMDDHHmmss
         signature = ':'.join((self.user_key, timestamp, self._generateSignature(timestamp)))
 
-        request = "https://%(host)s/v1/%(method)s?%(params)s" % {
+        request = "https://%(host)s/v1/%(path)s?%(params)s" % {
             'host': host,
-            'method': method,
+            'path': path,
             'params': urlencode(params, doseq=1)
             }
 
