@@ -194,6 +194,15 @@ class Connection(object):
         data = self._call(self.host, path, kwargs)
         return data
 
+    def contact_add(self, user_name, display_name, external_email, **kwargs):
+
+        kwargs['displayName'] = display_name
+        kwargs['externalEmail'] = external_email
+        kwargs['method'] = 'POST'
+        path = "customers/me/domains/%s/ex/contacts/%s" % (self.domain, user_name)
+        data = self._call(self.host, path, kwargs)
+        return data
+
     def mailbox_list(self, enabled=None, **kwargs):
         """ returns a list of Exchange mailboxes.
             takes an optional boolean status filter param called enabled,
@@ -228,6 +237,11 @@ class Connection(object):
         return data
 
     def mailbox_edit(self, mailbox_name, **kwargs):
+        """
+            mailbox_name (the Rackspace username only, no domain) is required
+            popular kwargs include isHidden and emailForwardingAddress.
+            emailForwardingAddress will ONLY take valid addresses w/in Exchange
+        """
 
         kwargs['method'] = 'PUT'
         path = "customers/me/domains/%s/ex/mailboxes/%s" % (self.domain, mailbox_name)
@@ -254,9 +268,20 @@ class Connection(object):
                 'host': host,
                 'path': path,
                 }
+            # url = 'http://httpbin.org/put'
             request = Request(url, data=urlencode(params))
             request.add_header('Content-Type', 'application/x-www-form-urlencoded')
             request.get_method = lambda: 'PUT'
+        elif params.get('method') == 'POST':
+            del params['method']
+            url = "https://%(host)s/v1/%(path)s" % {
+                'host': host,
+                'path': path,
+                }
+            # url = 'http://httpbin.org/put'
+            request = Request(url, data=urlencode(params))
+            request.add_header('Content-Type', 'application/x-www-form-urlencoded')
+            request.get_method = lambda: 'POST'
         else:
             request = "https://%(host)s/v1/%(path)s?%(params)s" % {
                 'host': host,
@@ -277,14 +302,14 @@ class Connection(object):
             if code not in (200, 202):
                 raise RackspaceError(500, result)
             if not result.startswith('{') and code != 202:
-                return result
+                return result #fix this, left in for debugging
             if code != 202:
                 data = json.loads(result)
             else:
                 data = "{'response': '202 Accepted'}"
             return data
         except URLError as e:
-            raise RackspaceError(500, "%s with resulted in %s" % (request,str(e)))
+            raise RackspaceError(500, "%s with resulted in %s" % (e.readlines(),str(e)))
         except HTTPError as e:
             raise RackspaceError(e.code, e.read())
         except RackspaceError:
