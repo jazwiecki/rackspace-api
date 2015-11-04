@@ -30,15 +30,28 @@ class DontRedirect(HTTPRedirectHandler):
         if code in (301, 302, 303, 307):
             raise HTTPError(req.get_full_url(), code, msg, headers, fp)
 
-
 class Error(Exception):
     pass
-
 
 class RackspaceError(Error):
     def __init__(self, code, message):
         Error.__init__(self, message)
         self.code = code
+
+def RateLimited(maxPerMinute):
+    minInterval = 60.0 / float(maxPerMinute)
+    def decorate(func):
+        lastTimeCalled = [0.0]
+        def rateLimitedFunction(*args,**kargs):
+            elapsed = time.clock() - lastTimeCalled[0]
+            leftToWait = minInterval - elapsed
+            if leftToWait>0:
+                time.sleep(leftToWait)
+            ret = func(*args,**kargs)
+            lastTimeCalled[0] = time.clock()
+            return ret
+        return rateLimitedFunction
+    return decorate
 
 def _utf8(s):
     if isinstance(s, text_type):
@@ -195,6 +208,7 @@ class Connection(object):
         data = self._call(self.host, path, kwargs)
         return data
 
+    @RateLimited(30) #30 calls/minute max for "POST" and "PUT" operations
     def contact_add(self, user_name, display_name, external_email, **kwargs):
 
         kwargs['displayName'] = display_name
@@ -237,6 +251,7 @@ class Connection(object):
         data = self._call(self.host, path, kwargs)
         return data
 
+    @RateLimited(30) #30 calls/minute max for "POST" and "PUT" operations
     def mailbox_edit(self, mailbox_name, **kwargs):
         """
             mailbox_name (the Rackspace username only, no domain) is required
