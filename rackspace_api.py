@@ -17,7 +17,7 @@ try:
     text_type = str
     binary_type = bytes
 except ImportError as e:
-    from urllib2 import build_opener, HTTPRedirectHandler, URLError, HTTPError
+    from urllib2 import build_opener, HTTPRedirectHandler, URLError, HTTPError, Request
     from urllib import urlencode
     string_types = basestring,
     integer_types = (int, long)
@@ -117,12 +117,20 @@ class Connection(object):
         parts = (major, minor, micro, '?')
         self.user_agent = "Python/%d.%d.%d rackspace_api/%s" % parts
 
+    def list_domains(self, **kwargs):
+        """ returns info about our domain
+        """
+
+        path = "customers/me/domains"
+        data = self._call(self.host, path, kwargs)
+        return data
+
     def list_lists(self, **kwargs):
         """ returns a list of all the Exchange distribution lists in the domain
 
         """
-        method = "domains/%s/ex/distributionlists" % self.domain
-        data = self._call(self.host, method, kwargs)
+        path = "domains/%s/ex/distributionlists" % self.domain
+        data = self._call(self.host, path, kwargs)
         return data
 
     def list_members(self, common_name, **kwargs):
@@ -132,8 +140,8 @@ class Connection(object):
             @parameter common_name: the common name of the list in question
         """
 
-        method = "customers/me/domains/%s/ex/distributionlists/%s/members" % (self.domain, common_name)
-        data = self._call(self.host, method, kwargs)
+        path = "customers/me/domains/%s/ex/distributionlists/%s/members" % (self.domain, common_name)
+        data = self._call(self.host, path, kwargs)
         return data
 
     def list_senders(self, common_name, **kwargs):
@@ -143,20 +151,20 @@ class Connection(object):
             @parameter common_name: the common name of the list in question
         """
 
-        method = "customers/me/domains/%s/ex/distributionlists/%s/senders" % (self.domain, common_name)
-        data = self._call(self.host, method, kwargs)
+        path = "customers/me/domains/%s/ex/distributionlists/%s/senders" % (self.domain, common_name)
+        data = self._call(self.host, path, kwargs)
         return data
 
     def list_addresses(self, common_name, **kwargs):
 
-        method = "customers/me/domains/%s/ex/distributionlists/%s/emailaddresses" % (self.domain, common_name)
-        data = self._call(self.host, method, kwargs)
+        path = "customers/me/domains/%s/ex/distributionlists/%s/emailaddresses" % (self.domain, common_name)
+        data = self._call(self.host, path, kwargs)
         return data
 
     def list_read(self, common_name, **kwargs):
 
-        method = "customers/me/domains/%s/ex/distributionlists/%s" % (self.domain, common_name)
-        data = self._call(self.host, method, kwargs)
+        path = "customers/me/domains/%s/ex/distributionlists/%s" % (self.domain, common_name)
+        data = self._call(self.host, path, kwargs)
         return data
 
     def list_export_all(self, email_address, **kwargs):
@@ -168,23 +176,77 @@ class Connection(object):
 
         """
 
-        method = "customers/me/domains/%s/ex/distributionlists/" % self.domain
+        path = "customers/me/domains/%s/ex/distributionlists/" % self.domain
 
         params = kwargs
         params["exportTo"] = email_address
-        data = self._call(self.host, method, params)
+        data = self._call(self.host, path, params)
         return data
 
     def contact_list(self, **kwargs):
 
-        method = "customers/me/domains/%s/ex/contacts" % self.domain
-        data = self._call(self.host, method, kwargs)
+        path = "customers/me/domains/%s/ex/contacts" % self.domain
+        data = self._call(self.host, path, kwargs)
         return data
 
     def contact_show(self, contact_name, **kwargs):
 
-        method = "customers/me/domains/%s/ex/contacts/%s" % (self.domain, contact_name)
-        data = self._call(self.host, method, kwargs)
+        path = "customers/me/domains/%s/ex/contacts/%s" % (self.domain, contact_name)
+        data = self._call(self.host, path, kwargs)
+        return data
+
+    def contact_add(self, user_name, display_name, external_email, **kwargs):
+
+        kwargs['displayName'] = display_name
+        kwargs['externalEmail'] = external_email
+        kwargs['method'] = 'POST'
+        path = "customers/me/domains/%s/ex/contacts/%s" % (self.domain, user_name)
+        data = self._call(self.host, path, kwargs)
+        return data
+
+    def mailbox_list(self, enabled=None, **kwargs):
+        """ returns a list of Exchange mailboxes.
+            takes an optional boolean status filter param called enabled,
+
+            enabled = True -> return only enabled mailboxes
+            enabled = False -> return only disabled mailboxes
+            not used -> return mailboxes with both states
+        """
+        if enabled:
+            kwargs["enabled"] = True
+        elif enabled == False:  #explicitly test for false in case no param passed
+            kwargs["enabled"] = False
+        path = "customers/me/domains/%s/ex/mailboxes" % (self.domain)
+        data = self._call(self.host, path, kwargs)
+        return data
+
+    def mailbox_show(self, mailbox_name, account_type="ex", **kwargs):
+        """ returns full details about mailbox_name.
+            account_type defaults to 'ex' ('Exchange') but passing in 'rs' ('Rackspace')
+            will query Rackspace's IMAP accounts.
+        """
+
+        path = "customers/me/domains/%s/%s/mailboxes/%s" % (self.domain, account_type, mailbox_name)
+        data = self._call(self.host, path, kwargs)
+        return data
+
+    def mailbox_show_permissions(self, mailbox_name, **kwargs):
+        """ returns a list of users with permissions for a mailbox"""
+
+        path = "customers/me/domains/%s/ex/mailboxes/%s/permissions" % (self.domain, mailbox_name)
+        data = self._call(self.host, path, kwargs)
+        return data
+
+    def mailbox_edit(self, mailbox_name, **kwargs):
+        """
+            mailbox_name (the Rackspace username only, no domain) is required
+            popular kwargs include isHidden and emailForwardingAddress.
+            emailForwardingAddress will ONLY take valid addresses w/in Exchange
+        """
+
+        kwargs['method'] = 'PUT'
+        path = "customers/me/domains/%s/ex/mailboxes/%s" % (self.domain, mailbox_name)
+        data = self._call(self.host, path, kwargs)
         return data
 
     # @classmethod
@@ -196,16 +258,37 @@ class Connection(object):
         signature = base64.b64encode(sha1_hash)
         return signature
 
-    def _call(self, host, method, params, timeout=5000):
+    def _call(self, host, path, params, timeout=5000):
 
         timestamp = time.strftime('%Y%m%d%H%M%S').encode('utf-8') #YYYYMMDDHHmmss
         signature = ':'.join((self.user_key, timestamp, self._generateSignature(timestamp)))
 
-        request = "https://%(host)s/v1/%(method)s?%(params)s" % {
-            'host': host,
-            'method': method,
-            'params': urlencode(params, doseq=1)
-            }
+        if params.get('method') == 'PUT':
+            del params['method']
+            url = "https://%(host)s/v1/%(path)s" % {
+                'host': host,
+                'path': path,
+                }
+            # url = 'http://httpbin.org/put'
+            request = Request(url, data=urlencode(params))
+            request.add_header('Content-Type', 'application/x-www-form-urlencoded')
+            request.get_method = lambda: 'PUT'
+        elif params.get('method') == 'POST':
+            del params['method']
+            url = "https://%(host)s/v1/%(path)s" % {
+                'host': host,
+                'path': path,
+                }
+            # url = 'http://httpbin.org/put'
+            request = Request(url, data=urlencode(params))
+            request.add_header('Content-Type', 'application/x-www-form-urlencoded')
+            request.get_method = lambda: 'POST'
+        else:
+            request = "https://%(host)s/v1/%(path)s?%(params)s" % {
+                'host': host,
+                'path': path,
+                'params': urlencode(params, doseq=1)
+                }
 
         try:
             opener = build_opener(DontRedirect())
@@ -213,20 +296,21 @@ class Connection(object):
             					('User-Agent', self.user_agent),
             					('Accept-Encoding', 'gzip, deflate'),
             					('Accept', 'application/json')]
+
             response = opener.open(request)
             code = response.code
             result = response.read().decode('utf-8')
             if code not in (200, 202):
                 raise RackspaceError(500, result)
             if not result.startswith('{') and code != 202:
-                raise RackspaceError(500, result)
+                return result #fix this, left in for debugging
             if code != 202:
                 data = json.loads(result)
             else:
                 data = "{'response': '202 Accepted'}"
             return data
         except URLError as e:
-            raise RackspaceError(500, "%s resulted in %s" % (request,str(e)))
+            raise RackspaceError(500, "%s with resulted in %s" % (e.readlines(),str(e)))
         except HTTPError as e:
             raise RackspaceError(e.code, e.read())
         except RackspaceError:
