@@ -315,17 +315,17 @@ class Connection(object):
             response = opener.open(request)
             code = response.code
             result = response.read().decode('utf-8')
-            if code not in (200, 202):
+            if code not in (200, 202, 204):
                 raise RackspaceError(500, result)
-            if not result.startswith('{') and code != 202:
-                return result #fix this, left in for debugging
-            if code != 202:
+            if code != 202 and result.startswith('{'):
                 data = json.loads(result)
-            else:
+            elif code == 202:
                 data = "{'response': '202 Accepted'}"
+            else:
+                data = "{'code': '%d', 'response': '%s'}" % (code, result)
             return data
         except URLError as e:
-            raise RackspaceError(500, "%s with resulted in %s" % (e.readlines(),str(e)))
+            raise RackspaceError(500, "Rackspace response: %s" % (e.readlines()))
         except HTTPError as e:
             raise RackspaceError(e.code, e.read())
         except RackspaceError:
