@@ -218,7 +218,7 @@ class Connection(object):
         data = self._call(self.host, path, kwargs)
         return data
 
-    def mailbox_list(self, enabled=None, **kwargs):
+    def mailbox_list(self, account_type="ex", enabled=None, **kwargs):
         """ returns a list of Exchange mailboxes.
             takes an optional boolean status filter param called enabled,
 
@@ -230,7 +230,7 @@ class Connection(object):
             kwargs["enabled"] = True
         elif enabled == False:  #explicitly test for false in case no param passed
             kwargs["enabled"] = False
-        path = "customers/me/domains/%s/ex/mailboxes" % (self.domain)
+        path = "customers/me/domains/%s/%s/mailboxes" % (self.domain, account_type)
         data = self._call(self.host, path, kwargs)
         return data
 
@@ -264,6 +264,25 @@ class Connection(object):
         data = self._call(self.host, path, kwargs)
         return data
 
+    def resource_show(self, resource_name, **kwargs):
+
+        path = "customers/me/domains/%s/ex/resources/%s" % (self.domain, resource_name)
+        data = self._call(self.host, path, kwargs)
+        return data
+
+    def resource_show_calendarprocessing(self, resource_name, **kwargs):
+
+        path = "customers/me/domains/%s/ex/resources/%s/calendarProcessing" % (self.domain, resource_name)
+        data = self._call(self.host, path, kwargs)
+        return data    
+
+    def resource_edit(self, resource_name, **kwargs):
+
+        kwargs['method'] = 'PUT'
+        path = "customers/me/domains/%s/ex/resources/%s" % (self.domain, resource_name)
+        data = self._call(self.host, path, kwargs)
+        return data
+
     # @classmethod
     def _generateSignature(self, timestamp):
         if not self.user_key or not self.secret_key:
@@ -284,7 +303,9 @@ class Connection(object):
                 'host': host,
                 'path': path,
                 }
-            # url = 'http://httpbin.org/put'
+            if params.get('test') == 'y':
+                url = 'http://httpbin.org/put'
+                del params['test']
             request = Request(url, data=urlencode(params))
             request.add_header('Content-Type', 'application/x-www-form-urlencoded')
             request.get_method = lambda: 'PUT'
