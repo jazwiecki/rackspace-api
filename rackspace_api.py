@@ -252,7 +252,7 @@ class Connection(object):
         return data
 
     @RateLimited(30) #30 calls/minute max for "POST" and "PUT" operations
-    def mailbox_edit(self, mailbox_name, **kwargs):
+    def mailbox_edit(self, mailbox_name, account_type="ex", **kwargs):
         """
             mailbox_name (the Rackspace username only, no domain) is required
             popular kwargs include isHidden and emailForwardingAddress.
@@ -260,7 +260,7 @@ class Connection(object):
         """
 
         kwargs['method'] = 'PUT'
-        path = "customers/me/domains/%s/ex/mailboxes/%s" % (self.domain, mailbox_name)
+        path = "customers/me/domains/%s/%s/mailboxes/%s" % (self.domain, account_type, mailbox_name)
         data = self._call(self.host, path, kwargs)
         return data
 
@@ -274,7 +274,7 @@ class Connection(object):
 
         path = "customers/me/domains/%s/ex/resources/%s/calendarProcessing" % (self.domain, resource_name)
         data = self._call(self.host, path, kwargs)
-        return data    
+        return data
 
     def resource_edit(self, resource_name, **kwargs):
 
