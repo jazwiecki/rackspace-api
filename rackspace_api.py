@@ -130,11 +130,29 @@ class Connection(object):
         parts = (major, minor, micro, '?')
         self.user_agent = "Python/%d.%d.%d rackspace_api/%s" % parts
 
-    def list_domains(self, **kwargs):
+    def domain_list(self, **kwargs):
         """ returns info about our domain
         """
 
         path = "customers/me/domains"
+        data = self._call(self.host, path, kwargs)
+        return data
+
+    def domain_list_aliases(self, **kwargs):
+        """ returns info about our domain
+        """
+
+        path = "customers/me/domains/%s/alternatedomains" % self.domain
+        data = self._call(self.host, path, kwargs)
+        return data
+
+    def domain_delete_alias(self, alias, **kwargs):
+        """ deletes domain alias
+            domain_delete_alias('example-alias.com')
+        """ 
+
+        kwargs['method'] = 'DELETE'
+        path = "customers/me/domains/%s/alternatedomains/%s" % (self.domain, alias)
         data = self._call(self.host, path, kwargs)
         return data
 
@@ -195,6 +213,12 @@ class Connection(object):
         params["exportTo"] = email_address
         data = self._call(self.host, path, params)
         return data
+
+    def list_delete(self, common_name, **kwargs):
+
+        kwargs['method'] = 'DELETE'
+        path = "domains/%s/ex/distributionlists/%s" % (self.domain, common_name)
+        data = self._call(self.host, path, kwargs)
 
     def contact_list(self, **kwargs):
 
@@ -264,6 +288,16 @@ class Connection(object):
         data = self._call(self.host, path, kwargs)
         return data
 
+    def mailbox_delete_alias(self, username, alias, **kwargs):
+        """ deletes email  alias
+            mailbox_delete_alias('username','example@example-alias.com')
+        """ 
+
+        kwargs['method'] = 'DELETE'
+        path = "customers/me/domains/%s/ex/mailboxes/%s/emailaddresses/%s" % (self.domain, username, alias)
+        data = self._call(self.host, path, kwargs)
+        return data
+
     def resource_show(self, resource_name, **kwargs):
 
         path = "customers/me/domains/%s/ex/resources/%s" % (self.domain, resource_name)
@@ -315,10 +349,22 @@ class Connection(object):
                 'host': host,
                 'path': path,
                 }
-            # url = 'http://httpbin.org/put'
+            # url = 'http://httpbin.org/post'
             request = Request(url, data=urlencode(params))
             request.add_header('Content-Type', 'application/x-www-form-urlencoded')
             request.get_method = lambda: 'POST'
+        elif params.get('method') == 'DELETE':
+            del params['method']
+            url = "https://%(host)s/v1/%(path)s" % {
+                'host': host,
+                'path': path,
+                }
+            if params.get('test') == 'y':
+                url = 'http://httpbin.org/delete'
+                del params['test']
+            request = Request(url, data=urlencode(params))
+            request.add_header('Content-Type', 'application/x-www-form-urlencoded')
+            request.get_method = lambda: 'DELETE'
         else:
             request = "https://%(host)s/v1/%(path)s?%(params)s" % {
                 'host': host,
@@ -346,7 +392,7 @@ class Connection(object):
                 data = "{'code': '%d', 'response': '%s'}" % (code, result)
             return data
         except URLError as e:
-            raise RackspaceError(500, "Rackspace response: %s" % (e.readlines()))
+            raise RackspaceError(500, e.readlines())
         except HTTPError as e:
             raise RackspaceError(e.code, e.read())
         except RackspaceError:

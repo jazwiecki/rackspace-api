@@ -33,5 +33,5 @@ def get_connection():
 
 def testApi():
     rackspace = get_connection()
-    data = rackspace.list_domains()
+    data = rackspace.domain_list()
     assert data['domains'] is not None
