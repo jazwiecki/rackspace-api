@@ -298,6 +298,16 @@ class Connection(object):
         data = self._call(self.host, path, kwargs)
         return data
 
+    def mailbox_delete(self, username, **kwargs):
+        """ deletes exchange mailbox
+            mailbox_delete_alias('username')
+        """ 
+
+        kwargs['method'] = 'DELETE'
+        path = "customers/me/domains/%s/ex/mailboxes/%s" % (self.domain, username)
+        data = self._call(self.host, path, kwargs)
+        return data
+
     def resource_show(self, resource_name, **kwargs):
 
         path = "customers/me/domains/%s/ex/resources/%s" % (self.domain, resource_name)
